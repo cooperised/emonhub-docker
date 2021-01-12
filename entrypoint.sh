@@ -17,16 +17,20 @@ fi
 
 useradd -r -u "$USER_ID" -g "$GROUP_ID" "$USERNAME"
 
-if [ -z "$EXTRA_GROUP_IDS" ]; then
+if [ -z "$EXTRA_GROUPS" ]; then
     echo "No additional groups"
 else
-    for i in ${EXTRA_GROUP_IDS//,/ }; do
-        if [ ! $(getent group "g$i") ]; then
-            groupadd -g "$i" "g$i"
+    for g in "${EXTRA_GROUPS//,/ }"; do
+        if [ ! $(getent group "$g") ]; then
+            groupadd -g "$g" "g$g" # assume group is numeric gid
+            EXTRA_GROUP_IDS="$EXTRA_GROUP_IDS,$g"
+        else
+            gid=$(getent group "$g" | cut -d: -f3)
+            EXTRA_GROUP_IDS="$EXTRA_GROUP_IDS,$gid"
         fi
     done
-    echo "Additional groups $EXTRA_GROUP_IDS"
-    usermod -G "$EXTRA_GROUP_IDS" "$USERNAME"
+    echo "Additional group IDs ${EXTRA_GROUP_IDS/,/}"
+    usermod -G "${EXTRA_GROUP_IDS/,/}" "$USERNAME"
 fi
 
 exec gosu emonhub "$@"
