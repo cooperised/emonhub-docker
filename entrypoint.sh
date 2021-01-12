@@ -1,30 +1,32 @@
 #!/bin/bash
 
-# Add local user "emonhub"
-# Either use the USER_ID if passed in at runtime or fallback to auto
+USERNAME=emonhub
+DEFAULT_UID_GID=9000
 
-if id emonhub > /dev/null; then
+userdel "$USERNAME" 2>/dev/null
+groupdel "$USERNAME" 2>/dev/null
 
-    EMON_ID="$(id -u emonhub)"
-    echo "Existing $EMON_ID, new $USER_ID"
+if [ -z "$USER_ID" ]; then USER_ID="$DEFAULT_UID_GID"; fi
+if [ -z "$GROUP_ID" ]; then GROUP_ID="$DEFAULT_UID_GID"; fi
 
-    if [ "$USER_ID" -ne "$EMON_ID" ]; then
-        echo "Deleting existing user 'emonhub' ($EMON_ID)"
-        userdel emonhub
-        echo "Starting with UID : $USER_ID"
-        useradd -u "$USER_ID" -M -r -G dialout,tty -c "emonHub user" emonhub
-    fi
+echo "Starting with UID:$USER_ID and GID:$GROUP_ID"
 
+if [ ! $(getent group "$GROUP_ID") ]; then
+    groupadd -g "$GROUP_ID" "$USERNAME";
+fi
+
+useradd -r -u "$USER_ID" -g "$GROUP_ID" "$USERNAME"
+
+if [ -z "$EXTRA_GROUP_IDS" ]; then
+    echo "No additional groups"
 else
-
-    if [ -z "$USER_ID" ]; then
-        echo "Starting with auto UID"
-        useradd -M -r -G dialout,tty -c "emonHub user" emonhub
-    else
-        echo "Starting with UID : $USER_ID"
-        useradd -u "$USER_ID" -M -r -G dialout,tty -c "emonHub user" emonhub
-    fi
-
+    for i in ${EXTRA_GROUP_IDS//,/ }; do
+        if [ ! $(getent group "g$i") ]; then
+            groupadd -g "$i" "g$i"
+        fi
+    done
+    echo "Additional groups $EXTRA_GROUP_IDS"
+    usermod -G "$EXTRA_GROUP_IDS" "$USERNAME"
 fi
 
 exec gosu emonhub "$@"
