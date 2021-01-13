@@ -20,7 +20,7 @@ useradd -r -u "$USER_ID" -g "$GROUP_ID" "$USERNAME"
 if [ -z "$EXTRA_GROUPS" ]; then
     echo "No additional groups"
 else
-    for g in "${EXTRA_GROUPS//,/ }"; do
+    for g in ${EXTRA_GROUPS//,/ }; do
         if [ ! $(getent group "$g") ]; then
             groupadd -g "$g" "g$g" # assume group is numeric gid
             EXTRA_GROUP_IDS="$EXTRA_GROUP_IDS,$g"
